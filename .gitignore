@@ -1,0 +1,4 @@
+*.idea/
+*.pyc
+awfulutils.egg-info/
+somethingawful_thread_*/
