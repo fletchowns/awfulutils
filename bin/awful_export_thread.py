@@ -6,7 +6,7 @@ import sys
 from awfulutils.awfulclient import AwfulClient
 
 
-usage="""
+usage = """
 Exports a Something Awful thread, including images and stylesheets, to local disk for archival purposes
 
 Example:
@@ -20,7 +20,8 @@ logger.addHandler(logging.StreamHandler(stream=sys.stdout))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=usage)
-    parser.add_argument('-u', '--userid', help='Something Awful User Id number. Use the value from your bbuserid cookie.',
+    parser.add_argument('-u', '--userid',
+                        help='Something Awful User Id number. Use the value from your bbuserid cookie.',
                         type=int, dest='userid')
     parser.add_argument('-s', '--session', help='Something Awful Session Id. Use the value of your bbpassword cookie.',
                         dest='session')
