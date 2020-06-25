@@ -171,8 +171,8 @@ class ThreadExport:
                         logger.info('Skipped page %d/%d because it already exists' % (page_number, self.total_pages))
                     else:
                         logger.info('Finished page %d/%d (%d new images, %d new stylseheets)'
-                              % (page_number, self.total_pages, data['downloaded_images_count'],
-                                 data['downloaded_stylesheets_count']))
+                                    % (page_number, self.total_pages, data['downloaded_images_count'],
+                                       data['downloaded_stylesheets_count']))
         logger.info('Finished exporting thread')
 
     def __save_page(self, page_number):
@@ -209,7 +209,8 @@ class ThreadExport:
             'downloaded_stylesheets_count': downloaded_stylesheets_count
         }
 
-    def __process_hyperlinks(self, soup):
+    @staticmethod
+    def __process_hyperlinks(soup):
         """
         Add the base url to relative links
         :param soup:
@@ -221,7 +222,8 @@ class ThreadExport:
             if not elem['href'].startswith('#'):
                 elem['href'] = urljoin(AwfulClient.FORUMS_URL, elem['href'])
 
-    def __add_charset(self, soup):
+    @staticmethod
+    def __add_charset(soup):
         """
         Specify the charset so special characters appear correctly
         :param soup:
@@ -242,7 +244,8 @@ class ThreadExport:
                 open(os.path.join(self.images_folder, 'favicon.ico'), 'wb') as output_file:
             shutil.copyfileobj(response, output_file)
 
-    def __remove_fluff(self, soup):
+    @staticmethod
+    def __remove_fluff(soup):
         """
         Remove all the extra stuff on the page we don't need
         :param soup:
