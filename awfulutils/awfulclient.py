@@ -165,15 +165,14 @@ class ThreadExport:
                 page_number = future_pages[future]
                 try:
                     data = future.result()
-                except Exception as e:
-                    logger.exception('Error saving page %d' % page_number, e)
-                else:
                     if data['skipped']:
                         logger.info('Skipped page %d/%d because it already exists' % (page_number, self.total_pages))
                     else:
                         logger.info('Finished page %d/%d (%d new images, %d new stylseheets)'
                                     % (page_number, self.total_pages, data['downloaded_images_count'],
                                        data['downloaded_stylesheets_count']))
+                except URLError as e:
+                    logger.exception('Error saving page %d' % page_number, e)
         logger.info('Finished exporting thread')
 
     def __save_page(self, page_number):
