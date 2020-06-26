@@ -294,12 +294,9 @@ class ThreadExport:
                     with open(output_filename, 'wb') as output_file, self.opener.open(original_src) as response:
                         shutil.copyfileobj(response, output_file)
                         downloaded_images_count += 1
-                except HTTPError as e:
-                    logger.warning('Error downloading image %s on page %d, HTTP code %d'
-                                   % (original_src, page_number, e.code))
                 except URLError as e:
-                    logger.exception('Error downloading image %s on page %d'
-                                     % (original_src, page_number), e)
+                    logger.warning('Error downloading image %s on page %d due to %s'
+                                     % (original_src, page_number, e.reason))
 
         # Links to external images should be downloaded too
         for anchor in soup.findAll('a', href=re.compile('\.(gif|png|jpeg|jpg)$')):
