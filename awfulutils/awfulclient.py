@@ -307,10 +307,13 @@ class ThreadExport:
 
             output_filename = os.path.join(self.images_folder, image_filename)
             if not os.path.exists(output_filename):
-                with open(output_filename, 'wb') as output_file, self.opener.open(original_href) as response:
-                    shutil.copyfileobj(response, output_file)
-                    downloaded_images_count += 1
-
+                try:
+                    with open(output_filename, 'wb') as output_file, self.opener.open(original_href) as response:
+                        shutil.copyfileobj(response, output_file)
+                        downloaded_images_count += 1
+                except URLError as e:
+                    logger.warning('Error downloading image %s on page %d due to %s'
+                                   % (original_href, page_number, e.reason))
         # Make sure quoted images are visible
         for timg_elem in soup.findAll('img', class_='timg'):
             timg_elem['style'] = 'visibility: visible'
