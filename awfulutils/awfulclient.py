@@ -194,7 +194,7 @@ class ThreadExport:
             with open(output_filename, 'w') as output_file:
                 logger.info('Starting page %d/%d' % (page_number, self.total_pages))
                 r = self.session.get(self.thread_url(page_number))
-                page_soup = BeautifulSoup(r.text, "html5lib")
+                page_soup = BeautifulSoup(r.text, 'html5lib')
                 self.__process_hyperlinks(page_soup)
                 self.__add_charset(page_soup)
                 self.__add_favicon(page_soup)
