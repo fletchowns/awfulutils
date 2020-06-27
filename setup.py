@@ -14,7 +14,7 @@ setup(
     author='Greg Barker',
     author_email='fletch@fletchowns.net',
     url='https://github.com/fletchowns/awfulutils',
-    scripts = ['bin/awful_export_thread.py'],
+    scripts = ['bin/awful_export_thread'],
     keywords=['something awful'],
     install_requires=[
         'html5lib',
