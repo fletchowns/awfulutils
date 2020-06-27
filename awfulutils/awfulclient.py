@@ -286,13 +286,14 @@ class ThreadExport:
             img['src'] = img['src'].replace('img.waffleimages.com', '46.59.2.17')
 
             image_url = urlparse(img['src'])
+            image_path = image_url.path if '%' in image_url.path else quote(image_url.path) # avoid double encoding
             if image_url.path == '/attachment.php':
                 if 'attachmentid' in image_url.query:
                     output_filename = 'attachment_%d' % int(parse.parse_qs(image_url.query)['attachmentid'][0])
                 else:
                     output_filename = 'attachment_%d' % int(parse.parse_qs(image_url.query)['postid'][0])
             else:
-                output_filename = os.path.basename(quote(image_url.path))
+                output_filename = os.path.basename(image_path)
 
             # Update the image source to reference the local copy
             img['src'] = 'images/%s' % output_filename
@@ -300,7 +301,7 @@ class ThreadExport:
             output_filename = os.path.join(self.images_folder, output_filename)
             if not os.path.exists(output_filename):
                 image_download_url = str.rstrip('%s://%s%s?%s' % (image_url.scheme, image_url.netloc,
-                                                                  quote(image_url.path), image_url.query), '?')
+                                                                  image_path, image_url.query), '?')
                 try:
                     with open(output_filename, 'wb') as output_file:
                         with self.opener.open(image_download_url, timeout=self.timeout) as response:
@@ -319,7 +320,8 @@ class ThreadExport:
         # Links to external images should be downloaded too
         for anchor in soup.findAll('a', href=re.compile('\.(gif|png|jpeg|jpg)$')):
             image_url = urlparse(anchor['href'])
-            image_filename = os.path.basename(quote(image_url.path))
+            image_path = image_url.path if '%' in image_url.path else quote(image_url.path)  # avoid double encoding
+            image_filename = os.path.basename(image_path)
 
             # Update the link to point to the local copy
             anchor['href'] = 'images/%s' % image_filename
@@ -327,7 +329,7 @@ class ThreadExport:
             output_filename = os.path.join(self.images_folder, image_filename)
             if not os.path.exists(output_filename):
                 image_download_url = str.rstrip('%s://%s%s?%s' % (image_url.scheme, image_url.netloc,
-                                                                  quote(image_url.path), image_url.query), '?')
+                                                                  image_path, image_url.query), '?')
                 try:
                     with open(output_filename, 'wb') as output_file:
                         with self.opener.open(image_download_url, timeout=self.timeout) as response:
