@@ -32,6 +32,17 @@ Now that your Virtual Environment is activated, you can install Awful Utils by r
 
     $ pip install git+git://github.com/fletchowns/awfulutils.git
 
+If a new version is pushed, you can upgrade yours by doing:
+
+.. code-block:: bash
+
+    $ pip install --upgrade git+git://github.com/fletchowns/awfulutils.git
+
+Don't forget to activate your Virtual Environment whenever you open a new terminal
+
+.. code-block:: bash
+    $ source ~/.virtualenvs/awfulutils
+
 Usage
 ------------
 
