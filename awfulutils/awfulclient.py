@@ -311,11 +311,11 @@ class ThreadExport:
                     logger.warning('Error downloading image %s on page %d due to %s'
                                    % (image_download_url, page_number, e.reason))
                 except Timeout:
-                    logger.warning('Error downloading image %s on page %d because %d second timeout was reached',
-                                   (image_download_url, page_number, self.timeout))
+                    logger.warning('Error downloading image %s on page %d because %d second timeout was reached'
+                                   % (image_download_url, page_number, self.timeout))
                 except RemoteDisconnected:
-                    logger.warning('Error downloading image %s on page %d because the remote disconnected',
-                                   (image_download_url, page_number))
+                    logger.warning('Error downloading image %s on page %d because the remote disconnected'
+                                   % (image_download_url, page_number))
 
         # Links to external images should be downloaded too
         for anchor in soup.findAll('a', href=re.compile('\.(gif|png|jpeg|jpg)$')):
@@ -339,11 +339,11 @@ class ThreadExport:
                     logger.warning('Error downloading image %s on page %d due to %s'
                                    % (image_download_url, page_number, e.reason))
                 except Timeout:
-                    logger.warning('Error downloading image %s on page %d because %d second timeout was reached',
-                                   (image_download_url, page_number, self.timeout))
+                    logger.warning('Error downloading image %s on page %d because %d second timeout was reached'
+                                   % (image_download_url, page_number, self.timeout))
                 except RemoteDisconnected:
-                    logger.warning('Error downloading image %s on page %d because the remote disconnected',
-                                   (image_download_url, page_number))
+                    logger.warning('Error downloading image %s on page %d because the remote disconnected'
+                                   % (image_download_url, page_number))
         # Make sure quoted images are visible
         for timg_elem in soup.findAll('img', class_='timg'):
             timg_elem['style'] = 'visibility: visible'
