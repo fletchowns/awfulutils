@@ -22,6 +22,7 @@ Using a Virtual Environment is always recommend to avoid installing packages sys
 To create the Virtual Environment and activate it:
 
 .. code-block:: bash
+
     $ mkdir ~/.virtualenvs
     $ python3 -m venv ~/.virtualenvs/awfulutils
     $ source ~/.virtualenvs/awfulutils
