@@ -38,9 +38,10 @@ If a new version is pushed, you can upgrade yours by doing:
 
     $ pip install --upgrade git+git://github.com/fletchowns/awfulutils.git
 
-Don't forget to activate your Virtual Environment whenever you open a new terminal
+Don't forget to activate your Virtual Environment whenever you open a new terminal!
 
 .. code-block:: bash
+
     $ source ~/.virtualenvs/awfulutils
 
 Usage
