@@ -11,7 +11,7 @@ Exports a Something Awful thread, including images and stylesheets, to local dis
 
 Example:
 
-awful_export_thread -u 38563 -s 99bd7c5025316dae9dcb6ea6d7366870 -t 2675400
+    awful_export_thread -u 38563 -s 99bd7c5025316dae9dcb6ea6d7366870 -t 2675400
 """
 
 logger = logging.getLogger('awfulutils')
@@ -19,7 +19,7 @@ logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(stream=sys.stdout))
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=usage)
+    parser = argparse.ArgumentParser(description=usage, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-u', '--userid',
                         help='Something Awful User Id number. Use the value from your bbuserid cookie.',
                         type=int, dest='userid')
