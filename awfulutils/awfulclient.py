@@ -200,6 +200,7 @@ class ThreadExport:
                 logger.info('Starting page %d/%d' % (page_number, self.total_pages))
                 r = self.session.get(self.thread_url(page_number), timeout=self.timeout)
                 page_soup = BeautifulSoup(r.text, 'html5lib')
+                self.__insert_custom_styles(page_soup)
                 self.__process_hyperlinks(page_soup)
                 self.__add_charset(page_soup)
                 self.__add_favicon(page_soup)
@@ -214,6 +215,16 @@ class ThreadExport:
             'downloaded_images_count': downloaded_images_count,
             'downloaded_stylesheets_count': downloaded_stylesheets_count
         }
+
+    @staticmethod
+    def __insert_custom_styles(soup):
+        """
+        Adds styles that are specific to this AwfulClient
+        :param soup:
+        :return:
+        """
+        soup.head.append(soup.new_tag('style', type='text/css'))
+        soup.style.append('.bbc-spoiler:hover { background-color: inherit; }')
 
     @staticmethod
     def __process_hyperlinks(soup):
