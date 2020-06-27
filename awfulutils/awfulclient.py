@@ -3,14 +3,17 @@ import glob
 import logging
 import os
 import re
-from datetime import datetime
-from urllib.error import URLError, HTTPError
-import urllib.request
-from urllib.parse import urlparse, parse_qs, urljoin
 import shutil
+import urllib.request
+from datetime import datetime
+from http.client import RemoteDisconnected
+from urllib import parse
+from urllib.error import URLError
+from urllib.parse import urlparse, parse_qs, urljoin, quote
 
-from bs4 import BeautifulSoup
 import requests
+from bs4 import BeautifulSoup
+from requests import Timeout
 
 logger = logging.getLogger(__name__)
 
@@ -20,13 +23,14 @@ class AwfulClient:
     DATETIME_FORMAT = '%b %d, %Y %H:%M'
     USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:33.0) Gecko/20100101 Firefox/33.0'
     FORUMS_URL = 'http://forums.somethingawful.com'
+    DEFAULT_TIMEOUT_SECONDS = 10
 
-    def __init__(self, userid, session):
+    def __init__(self, userid, sessionid, timeout=DEFAULT_TIMEOUT_SECONDS):
         self.userid = userid
-        self.session = session
+        self.timeout = timeout
         self.session = requests.Session()
         self.session.cookies.set('bbuserid', str(userid))
-        self.session.cookies.set('bbpassword', session)
+        self.session.cookies.set('bbpassword', sessionid)
         self.session.headers.setdefault('User-Agent', self.USER_AGENT)
 
     def userinfo(self, userid):
@@ -35,8 +39,8 @@ class AwfulClient:
         :param userid:
         :return:
         """
-        r = self.session.get('%s/member.php?action=getinfo&userid=%d' % (self.FORUMS_URL, userid))
-        soup = BeautifulSoup(r.text, "html5lib")
+        r = self.session.get('%s/member.php?action=getinfo&userid=%d' % (self.FORUMS_URL, userid), timeout=self.timeout)
+        soup = BeautifulSoup(r.text, 'html5lib')
 
         userinfo_elem = soup.find('dl', class_='userinfo')
 
@@ -82,7 +86,7 @@ class AwfulClient:
         return userinfo
 
     def export_thread(self, threadid):
-        thread_export = ThreadExport(self.session, threadid)
+        thread_export = ThreadExport(self.session, threadid, timeout=self.timeout)
         thread_export.save()
 
 
@@ -108,9 +112,10 @@ class UserInfo:
 class ThreadExport:
     PAGE_PATTERN_FILENAME = 'page_%s.html'
 
-    def __init__(self, session, threadid, posts_per_page=40):
+    def __init__(self, session, threadid, timeout=AwfulClient.DEFAULT_TIMEOUT_SECONDS, posts_per_page=40):
         self.session = session
         self.threadid = threadid
+        self.timeout = timeout
         self.posts_per_page = posts_per_page
 
         # setup an opener to download files
@@ -118,8 +123,8 @@ class ThreadExport:
         self.opener.addheaders = [('User-Agent', AwfulClient.USER_AGENT)]
 
         # retrieve some basic info about the thread
-        r = self.session.get(self.thread_url(1))
-        soup = BeautifulSoup(r.text, "html5lib")
+        r = self.session.get(self.thread_url(1), timeout=self.timeout)
+        soup = BeautifulSoup(r.text, 'html5lib')
 
         last_page_url = urlparse(soup.find('a', title='Last page')['href'])
         self.total_pages = int(parse_qs(last_page_url.query)['pagenumber'][0])
@@ -165,14 +170,15 @@ class ThreadExport:
                 page_number = future_pages[future]
                 try:
                     data = future.result()
+                except Exception as e:
+                    logger.exception('Error saving page %d' % page_number, e)
+                else:
                     if data['skipped']:
                         logger.info('Skipped page %d/%d because it already exists' % (page_number, self.total_pages))
                     else:
                         logger.info('Finished page %d/%d (%d new images, %d new stylseheets)'
                                     % (page_number, self.total_pages, data['downloaded_images_count'],
                                        data['downloaded_stylesheets_count']))
-                except URLError as e:
-                    logger.exception('Error saving page %d' % page_number, e)
         logger.info('Finished exporting thread')
 
     def __save_page(self, page_number):
@@ -192,7 +198,7 @@ class ThreadExport:
         else:
             with open(output_filename, 'w') as output_file:
                 logger.info('Starting page %d/%d' % (page_number, self.total_pages))
-                r = self.session.get(self.thread_url(page_number))
+                r = self.session.get(self.thread_url(page_number), timeout=self.timeout)
                 page_soup = BeautifulSoup(r.text, 'html5lib')
                 self.__process_hyperlinks(page_soup)
                 self.__add_charset(page_soup)
@@ -240,7 +246,7 @@ class ThreadExport:
         """
         favicon_tag = soup.new_tag('link', rel='icon', href='images/favicon.ico')
         soup.find('head').append(favicon_tag)
-        with self.opener.open('%s/favicon.ico' % AwfulClient.FORUMS_URL) as response, \
+        with self.opener.open('%s/favicon.ico' % AwfulClient.FORUMS_URL, timeout=self.timeout) as response, \
                 open(os.path.join(self.images_folder, 'favicon.ico'), 'wb') as output_file:
             shutil.copyfileobj(response, output_file)
 
@@ -279,41 +285,63 @@ class ThreadExport:
             # Change waffleimages pics to point to the replacement server
             img['src'] = img['src'].replace('img.waffleimages.com', '46.59.2.17')
 
-            original_src = img['src']
-            image_url = urlparse(original_src)
-            image_filename = os.path.basename(image_url.path)
-            if image_filename is 'attachment.php':
-                image_filename = 'attachment_%d' % int(original_src.split('?')[1])
+            image_url = urlparse(img['src'])
+            if image_url.path == '/attachment.php':
+                if 'attachmentid' in image_url.query:
+                    output_filename = 'attachment_%d' % int(parse.parse_qs(image_url.query)['attachmentid'][0])
+                else:
+                    output_filename = 'attachment_%d' % int(parse.parse_qs(image_url.query)['postid'][0])
+            else:
+                output_filename = os.path.basename(quote(image_url.path))
 
-            img['src'] = 'images/%s' % image_filename
+            # Update the image source to reference the local copy
+            img['src'] = 'images/%s' % output_filename
 
-            output_filename = os.path.join(self.images_folder, image_filename)
+            output_filename = os.path.join(self.images_folder, output_filename)
             if not os.path.exists(output_filename):
+                image_download_url = str.rstrip('%s://%s%s?%s' % (image_url.scheme, image_url.netloc,
+                                                                  quote(image_url.path), image_url.query), '?')
                 try:
-                    with open(output_filename, 'wb') as output_file, self.opener.open(original_src) as response:
-                        shutil.copyfileobj(response, output_file)
-                        downloaded_images_count += 1
+                    with open(output_filename, 'wb') as output_file:
+                        with self.opener.open(image_download_url, timeout=self.timeout) as response:
+                            shutil.copyfileobj(response, output_file)
+                            downloaded_images_count += 1
                 except URLError as e:
                     logger.warning('Error downloading image %s on page %d due to %s'
-                                     % (original_src, page_number, e.reason))
+                                   % (image_download_url, page_number, e.reason))
+                except Timeout:
+                    logger.warning('Error downloading image %s on page %d because %d second timeout was reached',
+                                   (image_download_url, page_number, self.timeout))
+                except RemoteDisconnected:
+                    logger.warning('Error downloading image %s on page %d because the remote disconnected',
+                                   (image_download_url, page_number))
 
         # Links to external images should be downloaded too
         for anchor in soup.findAll('a', href=re.compile('\.(gif|png|jpeg|jpg)$')):
-            original_href = anchor['href']
-            image_url = urlparse(original_href)
-            image_filename = os.path.basename(image_url.path)
+            image_url = urlparse(anchor['href'])
+            image_filename = os.path.basename(quote(image_url.path))
 
+            # Update the link to point to the local copy
             anchor['href'] = 'images/%s' % image_filename
 
             output_filename = os.path.join(self.images_folder, image_filename)
             if not os.path.exists(output_filename):
+                image_download_url = str.rstrip('%s://%s%s?%s' % (image_url.scheme, image_url.netloc,
+                                                                  quote(image_url.path), image_url.query), '?')
                 try:
-                    with open(output_filename, 'wb') as output_file, self.opener.open(original_href) as response:
-                        shutil.copyfileobj(response, output_file)
-                        downloaded_images_count += 1
+                    with open(output_filename, 'wb') as output_file:
+                        with self.opener.open(image_download_url, timeout=self.timeout) as response:
+                            shutil.copyfileobj(response, output_file)
+                            downloaded_images_count += 1
                 except URLError as e:
                     logger.warning('Error downloading image %s on page %d due to %s'
-                                   % (original_href, page_number, e.reason))
+                                   % (image_download_url, page_number, e.reason))
+                except Timeout:
+                    logger.warning('Error downloading image %s on page %d because %d second timeout was reached',
+                                   (image_download_url, page_number, self.timeout))
+                except RemoteDisconnected:
+                    logger.warning('Error downloading image %s on page %d because the remote disconnected',
+                                   (image_download_url, page_number))
         # Make sure quoted images are visible
         for timg_elem in soup.findAll('img', class_='timg'):
             timg_elem['style'] = 'visibility: visible'
@@ -338,9 +366,10 @@ class ThreadExport:
 
             output_filename = os.path.join(self.css_folder, stylesheet_filename)
             if not os.path.exists(output_filename):
-                with open(output_filename, 'wb') as output_file, self.opener.open(original_href) as response:
-                    shutil.copyfileobj(response, output_file)
-                    downloaded_stylesheets_count += 1
+                with open(output_filename, 'wb') as output_file:
+                    with self.opener.open(original_href, timeout=self.timeout) as response:
+                        shutil.copyfileobj(response, output_file)
+                        downloaded_stylesheets_count += 1
         return downloaded_stylesheets_count
 
     def __process_paginators(self, soup, page_number):

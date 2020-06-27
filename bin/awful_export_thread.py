@@ -11,7 +11,7 @@ Exports a Something Awful thread, including images and stylesheets, to local dis
 
 Example:
 
-bin/awful_export_thread -u 38563 -s 99bd7c5025316dae9dcb6ea6d7366870 -t 2675400
+awful_export_thread -u 38563 -s 99bd7c5025316dae9dcb6ea6d7366870 -t 2675400
 """
 
 logger = logging.getLogger('awfulutils')
@@ -27,9 +27,11 @@ if __name__ == '__main__':
                         dest='session')
     parser.add_argument('-t', '--threadid', help='Something Awful Thread Id number you wish to export',
                         type=int, dest='threadid')
+    parser.add_argument('-x', '--timeout', help='Set the timeout to use for HTTP requests. Default is 10 seconds.',
+                        type=int, dest='timeout', default=AwfulClient.DEFAULT_TIMEOUT_SECONDS)
     args = parser.parse_args()
     if args.userid and args.session and args.threadid:
-        awful_client = AwfulClient(args.userid, args.session)
+        awful_client = AwfulClient(args.userid, args.session, timeout=args.timeout)
         awful_client.export_thread(args.threadid)
     else:
         parser.print_help()
