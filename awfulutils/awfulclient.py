@@ -285,6 +285,32 @@ class ThreadExport:
         for tag in soup.findAll('ul', class_='postbuttons'):
             tag['style'] = 'visibility: hidden'
 
+    @staticmethod
+    def __handle_waffleimages_replacement(img_src, threadid, page_number):
+        if 'waffleimages' in img_src:
+            # Switch these to the mirror which has some but not all of the waffleimages archive
+            parsed_url = urlparse(img_src)
+            path_parts = parsed_url.path.split('/')
+            if len(path_parts) not in [3, 4]:
+                logger.error('Unable to parse waffleimages image %s on page %d of thread %d during'
+                             ' attempt update it to use randomwaffle.gbs.fm mirror' % (img_src, page_number, threadid))
+                return img_src
+            img_id = path_parts[1]
+            img_filename_parts = os.path.basename(parsed_url.path).split('.')
+            if len(img_filename_parts) != 2:
+                logger.error('Unable to parse waffleimages image %s on page %d of thread %d during'
+                             ' attempt update it to use randomwaffle.gbs.fm mirror' % (img_src, page_number, threadid))
+                return img_src
+            img_ext = img_filename_parts[1].lower()
+            waffleimages_mirror_url = '%s://%s/images/%s/%s.%s'\
+                                      % (parsed_url.scheme, 'randomwaffle.gbs.fm', img_id[:2], img_id, img_ext)
+            logger.info('Successfully parsed waffleimages url %s and swapped with backup mirror'
+                         ' %s on page %d of thread %d'
+                        % (img_src, waffleimages_mirror_url, threadid, page_number))
+
+            return waffleimages_mirror_url
+        return img_src
+
     def __process_images(self, soup, page_number):
         """
         Download all the images on the page and change references to local copy.  If the local copy already exists,
@@ -297,8 +323,7 @@ class ThreadExport:
             # Attachments need the base url prepended
             if not img['src'].startswith('http'):
                 img['src'] = urljoin(AwfulClient.FORUMS_URL, img['src'])
-            # Change waffleimages pics to point to the replacement server
-            img['src'] = img['src'].replace('img.waffleimages.com', '46.59.2.17')
+            img['src'] = self.__handle_waffleimages_replacement(img['src'], self.threadid, page_number)
 
             image_url = urlparse(img['src'])
             image_path = image_url.path if '%' in image_url.path else quote(image_url.path) # avoid double encoding
@@ -334,6 +359,7 @@ class ThreadExport:
 
         # Links to external images should be downloaded too
         for anchor in soup.findAll('a', href=re.compile('\.(gif|png|jpeg|jpg)$')):
+            anchor['href'] = self.__handle_waffleimages_replacement(anchor['href'], self.threadid, page_number)
             image_url = urlparse(anchor['href'])
             image_path = image_url.path if '%' in image_url.path else quote(image_url.path)  # avoid double encoding
             image_filename = os.path.basename(image_path)
