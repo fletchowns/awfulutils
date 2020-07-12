@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import urllib.request
+import time
 from datetime import datetime
 from http.client import RemoteDisconnected
 from urllib import parse
@@ -151,7 +152,7 @@ class ThreadExport:
         Saves all the pages and images
         :return:
         """
-        logger.info('Saving thread id %d export to %s' % (self.threadid, self.output_folder))
+        logger.info('Saving thread %d export to %s' % (self.threadid, self.output_folder))
 
         existing_pages = glob.glob(os.path.join(self.output_folder, 'page_*.html'))
         if existing_pages:
@@ -176,9 +177,9 @@ class ThreadExport:
                     if data['skipped']:
                         logger.info('Skipped page %d/%d because it already exists' % (page_number, self.total_pages))
                     else:
-                        logger.info('Finished page %d/%d (%d new images, %d new stylseheets)'
+                        logger.info('Finished page %d/%d (%d new images, %d new stylseheets) in %d seconds'
                                     % (page_number, self.total_pages, data['downloaded_images_count'],
-                                       data['downloaded_stylesheets_count']))
+                                       data['downloaded_stylesheets_count'], data['execution_time_seconds']))
         logger.info('Finished exporting thread')
 
     def __save_page(self, page_number):
@@ -187,6 +188,7 @@ class ThreadExport:
         :param page_number:
         :return:
         """
+        start = time.time()
         skipped = False
         downloaded_images_count = 0
         downloaded_stylesheets_count = 0
@@ -197,7 +199,7 @@ class ThreadExport:
             skipped = True
         else:
             with open(output_filename, 'w') as output_file:
-                logger.info('Starting page %d/%d' % (page_number, self.total_pages))
+                logger.info('Starting thread %d page %d/%d' % (self.threadid, page_number, self.total_pages))
                 r = self.session.get(self.thread_url(page_number), timeout=self.timeout)
                 page_soup = BeautifulSoup(r.text, 'html5lib')
                 self.__insert_custom_styles(page_soup)
@@ -210,10 +212,12 @@ class ThreadExport:
                 self.__process_paginators(page_soup, page_number)
                 output_file.write(page_soup.prettify())
 
+        end = time.time()
         return {
             'skipped': skipped,
             'downloaded_images_count': downloaded_images_count,
-            'downloaded_stylesheets_count': downloaded_stylesheets_count
+            'downloaded_stylesheets_count': downloaded_stylesheets_count,
+            'execution_time_seconds': end - start
         }
 
     @staticmethod
