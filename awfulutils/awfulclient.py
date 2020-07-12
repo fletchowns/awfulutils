@@ -326,7 +326,7 @@ class ThreadExport:
             img['src'] = self.__handle_waffleimages_replacement(img['src'], self.threadid, page_number)
 
             image_url = urlparse(img['src'])
-            image_path = image_url.path if '%' in image_url.path else quote(image_url.path) # avoid double encoding
+            image_path = image_url.path if '%' in image_url.path else quote(image_url.path)  # avoid double encoding
             if image_url.path == '/attachment.php':
                 if 'attachmentid' in image_url.query:
                     output_filename = 'attachment_%d' % int(parse.parse_qs(image_url.query)['attachmentid'][0])
